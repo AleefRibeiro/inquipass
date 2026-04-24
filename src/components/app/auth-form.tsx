@@ -1,0 +1,181 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Building2, KeyRound, Mail, Phone, UserRound } from "lucide-react";
+import { Logo } from "@/components/app/logo";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useInquiPassStore } from "@/lib/mock-store";
+import type { AccountType } from "@/lib/types";
+
+function routeFor(type?: AccountType) {
+  if (type === "agency") {
+    return "/imobiliaria";
+  }
+
+  if (type === "admin") {
+    return "/admin";
+  }
+
+  return "/dashboard";
+}
+
+export function AuthForm({ mode }: { mode: "login" | "register" }) {
+  const router = useRouter();
+  const { login, register, demoCredentials, resetDemo } = useInquiPassStore();
+  const [accountType, setAccountType] = useState<AccountType>("tenant");
+  const [message, setMessage] = useState("");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+
+    if (mode === "login") {
+      const result = login(String(data.get("email")), String(data.get("password")));
+      if (!result.success) {
+        setMessage("Email ou senha invalidos. Use um login demo ou crie uma conta.");
+        return;
+      }
+      router.push(routeFor(result.accountType));
+      return;
+    }
+
+    const account = register({
+      full_name: String(data.get("full_name")),
+      email: String(data.get("email")),
+      phone: String(data.get("phone")),
+      password: String(data.get("password")),
+      account_type: accountType,
+      company_name: String(data.get("company_name") || ""),
+    });
+
+    router.push(routeFor(account?.account_type));
+  }
+
+  return (
+    <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1fr_520px]">
+      <section className="relative hidden overflow-hidden bg-slate-950 text-white lg:block">
+        <Image
+          src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover opacity-[0.28]"
+        />
+        <div className="absolute inset-0 bg-slate-950/76" />
+        <div className="relative flex h-full flex-col justify-between p-10">
+          <Logo className="text-white" />
+          <div className="max-w-xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1 text-sm">
+              <KeyRound className="size-4" aria-hidden="true" />
+              Cadastro portatil e verificavel
+            </div>
+            <h1 className="text-4xl font-semibold tracking-normal">
+              Um unico perfil para apresentar documentos, renda e historico.
+            </h1>
+            <p className="mt-4 leading-7 text-white/72">
+              O MVP roda em modo demo local. Ao configurar Supabase, autenticação, banco e storage podem
+              assumir a persistencia real.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section className="flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <Logo />
+          </div>
+          <Card className="rounded-md">
+            <CardHeader>
+              <CardTitle>{mode === "login" ? "Entrar no InquiPass" : "Criar conta"}</CardTitle>
+              <CardDescription>
+                {mode === "login"
+                  ? "Acesse como inquilino, imobiliaria ou admin."
+                  : "Monte seu acesso para iniciar o passaporte."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4" onSubmit={handleSubmit}>
+                {mode === "register" ? (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor="full_name">Nome</Label>
+                      <div className="relative">
+                        <UserRound className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input id="full_name" name="full_name" className="pl-9" required />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Celular</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input id="phone" name="phone" className="pl-9" required />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Tipo de conta</Label>
+                      <Select value={accountType} onValueChange={(value) => setAccountType(value as AccountType)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tenant">Inquilino</SelectItem>
+                          <SelectItem value="agency">Imobiliaria</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {accountType === "agency" ? (
+                      <div className="grid gap-2">
+                        <Label htmlFor="company_name">Empresa</Label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input id="company_name" name="company_name" className="pl-9" />
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="email" name="email" type="email" className="pl-9" required />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input id="password" name="password" type="password" required />
+                </div>
+                {message ? <p className="text-sm text-destructive">{message}</p> : null}
+                <Button type="submit" className="h-10 rounded-md bg-primary">
+                  {mode === "login" ? "Entrar" : "Criar conta"}
+                </Button>
+              </form>
+              <div className="mt-5 rounded-md bg-slate-50 p-3 text-xs leading-6 text-muted-foreground">
+                {demoCredentials.map((credential) => (
+                  <p key={credential}>{credential}</p>
+                ))}
+                <button type="button" className="mt-2 font-medium text-primary" onClick={resetDemo}>
+                  Restaurar dados demo
+                </button>
+              </div>
+              <p className="mt-5 text-sm text-muted-foreground">
+                {mode === "login" ? "Ainda nao tem conta?" : "Ja tem conta?"}{" "}
+                <Link href={mode === "login" ? "/cadastro" : "/login"} className="font-medium text-primary">
+                  {mode === "login" ? "Criar conta" : "Entrar"}
+                </Link>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    </main>
+  );
+}

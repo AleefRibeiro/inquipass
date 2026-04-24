@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InquiPass
 
-## Getting Started
+MVP funcional de uma plataforma para criar, verificar e compartilhar um passaporte do inquilino.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Lucide React
+- Supabase preparado para Auth, Postgres e Storage
+
+## Como rodar
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Contas demo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Inquilino: `marina@demo.com` / `123456`
+- Imobiliaria: `imobiliaria@demo.com` / `123456`
+- Admin: `admin@demo.com` / `123456`
 
-## Learn More
+O MVP funciona em modo mock/localStorage para ser testavel sem credenciais. Ao configurar Supabase, use as variaveis abaixo e aplique `supabase/migrations/001_initial_schema.sql`.
 
-To learn more about Next.js, take a look at the following resources:
+## Supabase
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Crie um arquivo `.env.local`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
 
-## Deploy on Vercel
+O upload de documentos usa `passport-documents`; sem Supabase configurado, os arquivos geram URLs mockadas.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Fluxos incluidos
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Landing page
+- Cadastro/login demo
+- Dashboard do inquilino
+- Dados pessoais com consentimento LGPD
+- Upload de documentos
+- Renda com aluguel recomendado
+- Historico de aluguel
+- Referencias
+- Verificacoes mockadas
+- Passaporte privado e publico por token
+- Auditoria de acesso
+- Dashboard da imobiliaria
+- Admin interno
