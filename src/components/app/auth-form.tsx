@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInquiPassStore } from "@/lib/mock-store";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { AccountType } from "@/lib/types";
 
 function routeFor(type?: AccountType) {
@@ -28,21 +29,58 @@ function routeFor(type?: AccountType) {
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const { login, register, demoCredentials, resetDemo } = useInquiPassStore();
+  const { login, register, adoptAuthenticatedAccount } = useInquiPassStore();
   const [accountType, setAccountType] = useState<AccountType>("tenant");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitting(true);
+    setMessage("");
     const data = new FormData(event.currentTarget);
 
     if (mode === "login") {
-      const result = login(String(data.get("email")), String(data.get("password")));
-      if (!result.success) {
-        setMessage("Email ou senha invalidos. Use um login demo ou crie uma conta.");
+      const email = String(data.get("email"));
+      const password = String(data.get("password"));
+      const result = login(email, password);
+
+      if (result.success) {
+        router.push(routeFor(result.accountType));
         return;
       }
-      router.push(routeFor(result.accountType));
+
+      const supabase = getSupabaseBrowserClient();
+
+      if (supabase) {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (!authError && authData.user) {
+          const { data: profile } = await supabase
+            .from("users_profile")
+            .select("auth_user_id, account_type, full_name, email, phone")
+            .eq("auth_user_id", authData.user.id)
+            .maybeSingle();
+
+          if (profile) {
+            adoptAuthenticatedAccount({
+              auth_user_id: profile.auth_user_id,
+              account_type: profile.account_type as AccountType,
+              full_name: profile.full_name,
+              email: profile.email ?? email,
+              phone: profile.phone ?? "",
+            });
+            router.push(routeFor(profile.account_type as AccountType));
+            return;
+          }
+        }
+      }
+
+      setMessage("Email ou senha invalidos.");
+      setSubmitting(false);
       return;
     }
 
@@ -81,8 +119,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               Um unico perfil para apresentar documentos, renda e historico.
             </h1>
             <p className="mt-4 leading-7 text-white/72">
-              O MVP roda em modo demo local. Ao configurar Supabase, autenticação, banco e storage podem
-              assumir a persistencia real.
+              Organize as informacoes essenciais da locacao e compartilhe um perfil verificavel com
+              consentimento e seguranca.
             </p>
           </div>
         </div>
@@ -154,18 +192,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <Input id="password" name="password" type="password" required />
                 </div>
                 {message ? <p className="text-sm text-destructive">{message}</p> : null}
-                <Button type="submit" className="h-10 rounded-md bg-primary">
-                  {mode === "login" ? "Entrar" : "Criar conta"}
+                <Button type="submit" className="h-10 rounded-md bg-primary" disabled={submitting}>
+                  {submitting ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
                 </Button>
               </form>
-              <div className="mt-5 rounded-md bg-slate-50 p-3 text-xs leading-6 text-muted-foreground">
-                {demoCredentials.map((credential) => (
-                  <p key={credential}>{credential}</p>
-                ))}
-                <button type="button" className="mt-2 font-medium text-primary" onClick={resetDemo}>
-                  Restaurar dados demo
-                </button>
-              </div>
               <p className="mt-5 text-sm text-muted-foreground">
                 {mode === "login" ? "Ainda nao tem conta?" : "Ja tem conta?"}{" "}
                 <Link href={mode === "login" ? "/cadastro" : "/login"} className="font-medium text-primary">

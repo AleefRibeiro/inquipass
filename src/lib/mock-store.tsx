@@ -201,6 +201,50 @@ export function useInquiPassStore() {
 
       return { success, accountType };
     },
+    adoptAuthenticatedAccount(input: {
+      auth_user_id: string;
+      account_type: AccountType;
+      full_name: string;
+      email: string;
+      phone?: string;
+      company_name?: string;
+    }) {
+      update((draft) => {
+        const existing = draft.accounts.find(
+          (account) =>
+            account.auth_user_id === input.auth_user_id ||
+            account.email.toLowerCase() === input.email.toLowerCase(),
+        );
+
+        if (existing) {
+          Object.assign(existing, {
+            auth_user_id: input.auth_user_id,
+            account_type: input.account_type,
+            full_name: input.full_name,
+            email: input.email,
+            phone: input.phone ?? existing.phone,
+            company_name: input.company_name ?? existing.company_name,
+          });
+          draft.current_user_id = existing.id;
+          return;
+        }
+
+        const account: MockAccount = {
+          id: id("account"),
+          auth_user_id: input.auth_user_id,
+          account_type: input.account_type,
+          full_name: input.full_name,
+          email: input.email,
+          phone: input.phone ?? "",
+          password: "",
+          company_name: input.company_name,
+          created_at: new Date().toISOString(),
+        };
+
+        draft.accounts.push(account);
+        draft.current_user_id = account.id;
+      });
+    },
     logout() {
       update((draft) => {
         draft.current_user_id = null;
