@@ -163,6 +163,26 @@ as $$
   );
 $$;
 
+drop policy if exists "profiles_select_own_or_admin" on public.users_profile;
+drop policy if exists "profiles_update_own_or_admin" on public.users_profile;
+drop policy if exists "profiles_insert_own" on public.users_profile;
+drop policy if exists "passports_select_allowed" on public.tenant_passports;
+drop policy if exists "passports_insert_own" on public.tenant_passports;
+drop policy if exists "passports_update_own_or_admin" on public.tenant_passports;
+drop policy if exists "documents_select_guarded" on public.documents;
+drop policy if exists "documents_insert_own" on public.documents;
+drop policy if exists "documents_update_own_or_admin" on public.documents;
+drop policy if exists "income_select_allowed" on public.income_records;
+drop policy if exists "income_write_own_or_admin" on public.income_records;
+drop policy if exists "history_select_allowed" on public.rental_history;
+drop policy if exists "history_write_own_or_admin" on public.rental_history;
+drop policy if exists "references_select_allowed" on public."references";
+drop policy if exists "references_write_own_or_admin" on public."references";
+drop policy if exists "checks_select_allowed" on public.verification_checks;
+drop policy if exists "checks_write_own_or_admin" on public.verification_checks;
+drop policy if exists "share_logs_insert_public" on public.share_access_logs;
+drop policy if exists "share_logs_select_allowed" on public.share_access_logs;
+
 create policy "profiles_select_own_or_admin"
 on public.users_profile for select
 using (auth_user_id = auth.uid() or public.is_admin());
