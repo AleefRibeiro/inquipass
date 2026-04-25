@@ -36,6 +36,28 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [submitting, setSubmitting] = useState(false);
   const [resetSubmitting, setResetSubmitting] = useState(false);
 
+  function mapAuthError(message?: string) {
+    const normalized = (message ?? "").toLowerCase();
+
+    if (!normalized) {
+      return "Nao foi possivel autenticar agora.";
+    }
+
+    if (normalized.includes("invalid login credentials")) {
+      return "Email ou senha invalidos.";
+    }
+
+    if (normalized.includes("email not confirmed")) {
+      return "Seu email ainda nao foi confirmado.";
+    }
+
+    if (normalized.includes("too many requests")) {
+      return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+    }
+
+    return "Nao foi possivel autenticar agora.";
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -54,35 +76,80 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       const supabase = getSupabaseBrowserClient();
 
-      if (supabase) {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (!authError && authData.user) {
-          const { data: profile } = await supabase
-            .from("users_profile")
-            .select("auth_user_id, account_type, full_name, email, phone")
-            .eq("auth_user_id", authData.user.id)
-            .maybeSingle();
-
-          if (profile) {
-            adoptAuthenticatedAccount({
-              auth_user_id: profile.auth_user_id,
-              account_type: profile.account_type as AccountType,
-              full_name: profile.full_name,
-              email: profile.email ?? email,
-              phone: profile.phone ?? "",
-            });
-            router.push(routeFor(profile.account_type as AccountType));
-            return;
-          }
-        }
+      if (!supabase) {
+        setMessage("Login externo indisponivel: Supabase nao configurado no ambiente.");
+        setSubmitting(false);
+        return;
       }
 
-      setMessage("Email ou senha invalidos.");
-      setSubmitting(false);
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError || !authData.user) {
+        setMessage(mapAuthError(authError?.message));
+        setSubmitting(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("users_profile")
+        .select("auth_user_id, account_type, full_name, email, phone")
+        .eq("auth_user_id", authData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        setMessage("Falha ao carregar perfil. Tente novamente.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (profile) {
+        adoptAuthenticatedAccount({
+          auth_user_id: profile.auth_user_id,
+          account_type: profile.account_type as AccountType,
+          full_name: profile.full_name,
+          email: profile.email ?? email,
+          phone: profile.phone ?? "",
+        });
+        router.push(routeFor(profile.account_type as AccountType));
+        return;
+      }
+
+      const inferredType = (authData.user.user_metadata?.account_type as AccountType | undefined) ?? "tenant";
+      const fullName =
+        typeof authData.user.user_metadata?.full_name === "string" && authData.user.user_metadata.full_name
+          ? authData.user.user_metadata.full_name
+          : email.split("@")[0];
+
+      const { data: createdProfile, error: createProfileError } = await supabase
+        .from("users_profile")
+        .insert({
+          auth_user_id: authData.user.id,
+          account_type: inferredType,
+          full_name: fullName,
+          email: authData.user.email ?? email,
+          phone: "",
+          lgpd_consent: true,
+        })
+        .select("auth_user_id, account_type, full_name, email, phone")
+        .single();
+
+      if (createProfileError || !createdProfile) {
+        setMessage("Conta autenticada, mas nao foi possivel criar perfil. Contate o suporte.");
+        setSubmitting(false);
+        return;
+      }
+
+      adoptAuthenticatedAccount({
+        auth_user_id: createdProfile.auth_user_id,
+        account_type: createdProfile.account_type as AccountType,
+        full_name: createdProfile.full_name,
+        email: createdProfile.email ?? email,
+        phone: createdProfile.phone ?? "",
+      });
+      router.push(routeFor(createdProfile.account_type as AccountType));
       return;
     }
 
