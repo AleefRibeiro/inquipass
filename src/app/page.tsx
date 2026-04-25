@@ -60,9 +60,18 @@ export default function Home() {
               Precos
             </a>
           </nav>
-          <Button asChild className="h-9 rounded-md bg-emerald-500 px-4 text-slate-950 hover:bg-emerald-400">
-            <Link href="/cadastro">Criar passaporte</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              className="hidden h-9 rounded-md border-white/30 bg-white/10 px-4 text-white hover:bg-white/20 hover:text-white sm:inline-flex"
+            >
+              <Link href="/login">Entrar</Link>
+            </Button>
+            <Button asChild className="h-9 rounded-md bg-emerald-500 px-4 text-slate-950 hover:bg-emerald-400">
+              <Link href="/cadastro">Criar passaporte</Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -101,7 +110,7 @@ export default function Home() {
                 variant="outline"
                 className="h-11 rounded-md border-white/30 bg-white/10 px-5 text-white hover:bg-white/20 hover:text-white"
               >
-                <Link href="/login">Sou imobiliaria</Link>
+                <Link href="/login">Entrar</Link>
               </Button>
             </div>
           </div>

@@ -31,8 +31,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const { login, register, adoptAuthenticatedAccount } = useInquiPassStore();
   const [accountType, setAccountType] = useState<AccountType>("tenant");
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,6 +96,33 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     });
 
     router.push(routeFor(account?.account_type));
+  }
+
+  async function handlePasswordReset() {
+    setMessage("");
+
+    if (!email) {
+      setMessage("Informe seu email para receber o link de redefinicao.");
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setMessage("Recuperacao indisponivel no momento.");
+      return;
+    }
+
+    setResetSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/resetar-senha`,
+    });
+
+    setResetSubmitting(false);
+    setMessage(
+      error
+        ? "Nao foi possivel enviar o email agora."
+        : "Enviamos um link para redefinir sua senha.",
+    );
   }
 
   return (
@@ -184,11 +213,31 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="email" name="email" type="email" className="pl-9" required />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      className="pl-9"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                    />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password">Senha</Label>
+                    {mode === "login" ? (
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-primary hover:underline"
+                        onClick={handlePasswordReset}
+                        disabled={resetSubmitting}
+                      >
+                        {resetSubmitting ? "Enviando..." : "Esqueci minha senha"}
+                      </button>
+                    ) : null}
+                  </div>
                   <Input id="password" name="password" type="password" required />
                 </div>
                 {message ? <p className="text-sm text-destructive">{message}</p> : null}
