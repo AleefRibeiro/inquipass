@@ -21,7 +21,7 @@ export async function uploadPassportDocument({
   }
 
   const { error } = await supabase.storage.from("passport-documents").upload(path, file, {
-    upsert: true,
+    upsert: false,
   });
 
   if (error) {
