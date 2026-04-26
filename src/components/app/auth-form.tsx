@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInquiPassStore } from "@/lib/mock-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { fetchTenantWorkspace } from "@/lib/supabase/tenant-sync";
 import type { AccountType } from "@/lib/types";
 
 function routeFor(type?: AccountType) {
@@ -29,7 +30,7 @@ function routeFor(type?: AccountType) {
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const { login, register, adoptAuthenticatedAccount } = useInquiPassStore();
+  const { login, register, adoptAuthenticatedAccount, syncTenantWorkspace } = useInquiPassStore();
   const [accountType, setAccountType] = useState<AccountType>("tenant");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -114,14 +115,25 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           phone: profile.phone ?? "",
           company_name: profile.account_type === "agency" ? "Imobiliária Demo" : undefined,
         });
+        if (profile.account_type === "tenant") {
+          const tenantWorkspace = await fetchTenantWorkspace(supabase, profile.auth_user_id);
+          if (tenantWorkspace) {
+            syncTenantWorkspace(tenantWorkspace);
+          }
+        }
         router.push(routeFor(profile.account_type as AccountType));
         return;
       }
 
-      const inferredType = (authData.user.user_metadata?.account_type as AccountType | undefined) ?? "tenant";
+      const inferredType =
+        (authData.user.user_metadata?.account_type as AccountType | undefined) ??
+        (authData.user.user_metadata?.type as AccountType | undefined) ??
+        "tenant";
       const fullName =
         typeof authData.user.user_metadata?.full_name === "string" && authData.user.user_metadata.full_name
           ? authData.user.user_metadata.full_name
+          : typeof authData.user.user_metadata?.name === "string" && authData.user.user_metadata.name
+            ? authData.user.user_metadata.name
           : email.split("@")[0];
 
       const { data: createdProfile, error: createProfileError } = await supabase
@@ -150,6 +162,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         email: createdProfile.email ?? email,
         phone: createdProfile.phone ?? "",
       });
+      if (createdProfile.account_type === "tenant") {
+        const tenantWorkspace = await fetchTenantWorkspace(supabase, createdProfile.auth_user_id);
+        if (tenantWorkspace) {
+          syncTenantWorkspace(tenantWorkspace);
+        }
+      }
       router.push(routeFor(createdProfile.account_type as AccountType));
       return;
     }

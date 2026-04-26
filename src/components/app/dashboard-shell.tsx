@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useInquiPassStore } from "@/lib/mock-store";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const tenantNav = [
   { href: "/dashboard", label: "Painel", icon: Gauge },
@@ -91,6 +92,15 @@ export function DashboardShell({
   const router = useRouter();
   const { activeAccount, logout } = useInquiPassStore();
 
+  async function handleLogout() {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    logout();
+    router.push("/login");
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b bg-white/95 backdrop-blur">
@@ -124,8 +134,7 @@ export function DashboardShell({
               size="icon"
               aria-label="Sair"
               onClick={() => {
-                logout();
-                router.push("/login");
+                void handleLogout();
               }}
             >
               <LogOut className="size-4" aria-hidden="true" />

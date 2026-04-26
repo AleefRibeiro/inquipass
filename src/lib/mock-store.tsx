@@ -5,6 +5,7 @@ import { calculateCompletion, calculateRecommendedRent, getProfileLevel } from "
 import { todayISODate, addMonths } from "@/lib/date";
 import { createInitialState } from "@/lib/sample-data";
 import { runVerificationSuite } from "@/lib/providers";
+import type { TenantWorkspace } from "@/lib/supabase/tenant-sync";
 import type {
   AccountType,
   CheckType,
@@ -130,7 +131,7 @@ export function useInquiPassStore() {
   }, []);
 
   const update = (recipe: (draft: InquiPassState) => void) => {
-    const current = cloneState(state ?? readState());
+    const current = cloneState(readState());
     recipe(current);
     const next = persist(current);
     setState(next);
@@ -243,6 +244,67 @@ export function useInquiPassStore() {
 
         draft.accounts.push(account);
         draft.current_user_id = account.id;
+      });
+    },
+    syncTenantWorkspace(workspace: TenantWorkspace) {
+      update((draft) => {
+        const previousProfile = draft.users_profile.find(
+          (profile) =>
+            profile.id === workspace.profile.id ||
+            profile.auth_user_id === workspace.profile.auth_user_id,
+        );
+
+        draft.users_profile = draft.users_profile.filter(
+          (profile) =>
+            profile.id !== workspace.profile.id &&
+            profile.auth_user_id !== workspace.profile.auth_user_id,
+        );
+        draft.users_profile.push(workspace.profile);
+
+        draft.tenant_passports = draft.tenant_passports.filter((passport) => {
+          if (passport.id === workspace.passport.id) {
+            return false;
+          }
+
+          if (passport.user_id === workspace.profile.id) {
+            return false;
+          }
+
+          if (previousProfile && passport.user_id === previousProfile.id) {
+            return false;
+          }
+
+          return true;
+        });
+        draft.tenant_passports.push({
+          ...workspace.passport,
+          user_id: workspace.profile.id,
+        });
+
+        draft.documents = draft.documents.filter((document) => document.passport_id !== workspace.passport.id);
+        draft.documents.push(...workspace.documents.map((document) => ({ ...document })));
+
+        draft.income_records = draft.income_records.filter((income) => income.passport_id !== workspace.passport.id);
+        if (workspace.income) {
+          draft.income_records.push({ ...workspace.income });
+        }
+
+        draft.rental_history = draft.rental_history.filter(
+          (history) => history.passport_id !== workspace.passport.id,
+        );
+        if (workspace.rentalHistory) {
+          draft.rental_history.push({ ...workspace.rentalHistory });
+        }
+
+        draft.references = draft.references.filter(
+          (reference) => reference.passport_id !== workspace.passport.id,
+        );
+        draft.references.push(...workspace.references.map((reference) => ({ ...reference })));
+
+        draft.verification_checks = draft.verification_checks.filter(
+          (check) => check.passport_id !== workspace.passport.id,
+        );
+        draft.verification_checks.push(...workspace.checks.map((check) => ({ ...check })));
       });
     },
     logout() {
