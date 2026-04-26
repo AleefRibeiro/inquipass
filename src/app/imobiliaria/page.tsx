@@ -20,7 +20,7 @@ export default function AgencyDashboardPage() {
     return <LoadingState />;
   }
 
-  if (!state || activeAccount?.account_type !== "agency") {
+  if (activeAccount?.account_type !== "agency") {
     return (
       <DashboardShell title="Dashboard da imobiliaria">
         <Card className="rounded-md">
@@ -35,9 +35,9 @@ export default function AgencyDashboardPage() {
     );
   }
 
-  const logs = state.share_access_logs.filter(
+  const logs = state?.share_access_logs.filter(
     (log) => log.viewer_email.toLowerCase() === activeAccount.email.toLowerCase(),
-  );
+  ) ?? [];
 
   const rows = logs
     .map((log) => {
@@ -63,48 +63,55 @@ export default function AgencyDashboardPage() {
             <CardTitle>Passaportes consultados</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Inquilino</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data de acesso</TableHead>
-                  <TableHead>Completude</TableHead>
-                  <TableHead>Renda comprovada</TableHead>
-                  <TableHead>Aluguel recomendado</TableHead>
-                  <TableHead className="text-right">Acao</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  if (!row) {
-                    return null;
-                  }
-                  const { snapshot, log } = row;
+            {rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <p className="text-sm text-muted-foreground">Nenhum passaporte consultado ainda.</p>
+                <p className="text-xs text-muted-foreground">Inquilinos que compartilharem seus passaportes aparecerão aqui.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Inquilino</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data de acesso</TableHead>
+                    <TableHead>Completude</TableHead>
+                    <TableHead>Renda comprovada</TableHead>
+                    <TableHead>Aluguel recomendado</TableHead>
+                    <TableHead className="text-right">Acao</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => {
+                    if (!row) {
+                      return null;
+                    }
+                    const { snapshot, log } = row;
 
-                  return (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">{snapshot.profile?.full_name}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={snapshot.passport.status} />
-                      </TableCell>
-                      <TableCell>{formatDate(log.created_at)}</TableCell>
-                      <TableCell>{snapshot.passport.completion_percentage}%</TableCell>
-                      <TableCell>{formatCurrency(snapshot.income?.verified_income ?? 0)}</TableCell>
-                      <TableCell>{formatCurrency(snapshot.passport.recommended_rent)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="outline" className="h-9 rounded-md">
-                          <Link href={`/passport/public/${snapshot.passport.public_token}`}>
-                            <Eye className="size-4" aria-hidden="true" />
-                            Ver
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                    return (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-medium">{snapshot.profile?.full_name}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={snapshot.passport.status} />
+                        </TableCell>
+                        <TableCell>{formatDate(log.created_at)}</TableCell>
+                        <TableCell>{snapshot.passport.completion_percentage}%</TableCell>
+                        <TableCell>{formatCurrency(snapshot.income?.verified_income ?? 0)}</TableCell>
+                        <TableCell>{formatCurrency(snapshot.passport.recommended_rent)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild variant="outline" className="h-9 rounded-md">
+                            <Link href={`/passport/public/${snapshot.passport.public_token}`}>
+                              <Eye className="size-4" aria-hidden="true" />
+                              Ver
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

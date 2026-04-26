@@ -112,6 +112,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           full_name: profile.full_name,
           email: profile.email ?? email,
           phone: profile.phone ?? "",
+          company_name: profile.account_type === "agency" ? "Imobiliária Demo" : undefined,
         });
         router.push(routeFor(profile.account_type as AccountType));
         return;
